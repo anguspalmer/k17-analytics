@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="m2m_sp_widget_dependency">
+    <m2m_sp_widget_dependency action="INSERT_OR_UPDATE">
+        <sp_dependency display_value="chart.js">a7a8754347011200ba13a5554ee4905c</sp_dependency>
+        <sp_widget display_value="Task Analysis">c5fac12edba63200b195773ebf9619d9</sp_widget>
+        <sys_class_name>m2m_sp_widget_dependency</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2017-05-11 09:16:04</sys_created_on>
+        <sys_customer_update>true</sys_customer_update>
+        <sys_id>30ea3fdbdb6a3200b195773ebf961963</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>chart.js.Task Analysis</sys_name>
+        <sys_package display_value="k17_analytics" source="x_86566_k17">15c31e56db223200b195773ebf96198c</sys_package>
+        <sys_policy/>
+        <sys_replace_on_upgrade>false</sys_replace_on_upgrade>
+        <sys_scope display_value="k17_analytics">15c31e56db223200b195773ebf96198c</sys_scope>
+        <sys_update_name>m2m_sp_widget_dependency_30ea3fdbdb6a3200b195773ebf961963</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2017-05-11 09:16:04</sys_updated_on>
+    </m2m_sp_widget_dependency>
+</record_update>

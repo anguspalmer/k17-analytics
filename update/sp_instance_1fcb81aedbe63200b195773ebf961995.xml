@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sp_instance">
+    <sp_instance action="INSERT_OR_UPDATE">
+        <active>true</active>
+        <class_name/>
+        <color>default</color>
+        <css/>
+        <glyph/>
+        <id/>
+        <order>1</order>
+        <short_description/>
+        <size>md</size>
+        <sp_column display_value="1">55cb81aedbe63200b195773ebf9619f6</sp_column>
+        <sp_widget display_value="Task Analysis">c5fac12edba63200b195773ebf9619d9</sp_widget>
+        <sys_class_name>sp_instance</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2017-05-08 12:35:39</sys_created_on>
+        <sys_customer_update>true</sys_customer_update>
+        <sys_id>1fcb81aedbe63200b195773ebf961995</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name/>
+        <sys_package display_value="k17_analytics" source="x_86566_k17">15c31e56db223200b195773ebf96198c</sys_package>
+        <sys_policy/>
+        <sys_replace_on_upgrade>false</sys_replace_on_upgrade>
+        <sys_scope display_value="k17_analytics">15c31e56db223200b195773ebf96198c</sys_scope>
+        <sys_update_name>sp_instance_1fcb81aedbe63200b195773ebf961995</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2017-05-08 12:35:39</sys_updated_on>
+        <title/>
+        <url/>
+        <widget_parameters/>
+    </sp_instance>
+    <sys_translated_text action="delete_multiple" query="documentkey=1fcb81aedbe63200b195773ebf961995"/>
+</record_update>

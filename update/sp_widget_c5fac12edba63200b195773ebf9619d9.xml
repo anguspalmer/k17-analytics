@@ -1,0 +1,335 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sp_widget">
+    <sp_widget action="INSERT_OR_UPDATE">
+        <client_script><![CDATA[function TaskAnalysisController($http) {
+    var vm = this;
+
+	vm.rawData = [];
+	vm.selectPeriod = selectPeriod;
+	vm.selectType = selectType;
+	vm.selectGroup = selectGroup;
+	
+	activate();
+	
+	function activate() {
+		getRecords('x_86566_k17_dw_data', 'name=tasksByPeriod^data!=[]', -1, 0, ['year', 'month', 'data'])
+			.then(parseData)
+			.then(cacheData)
+			.then(extractFilters)
+			.then(applyData);
+	}
+	
+	function cacheData(data) {
+		vm.rawData = data;
+		return data;
+	}
+	
+	function parseData(records) {
+		var result = [];
+		
+		_.each(records, function(record) {
+			var data = JSON.parse(record.data);
+
+			var year = Number(record.year);
+			var month = Number(record.month);
+			
+			_.each(data, function(entry) {
+				var value = {
+					date: moment(year + '-' + month + '-' + '01').format('MMM, YY'),
+					year: year,
+					month: month,
+					periodKey: 12 * year + month,
+
+					group: entry.group,
+					groupId: entry.groupId,
+					type: entry.type,
+					priority: entry.priority,
+
+					count: Number(entry.data.count)
+				};
+
+				result.push(value);
+			});
+		});
+		
+		return result;
+	}
+		
+	function transformData(data) {
+		return _.chain(vm.periods)
+			.filter(function(period) {
+				return period.value <= vm.selectedPeriod.value;
+			})
+			.map(function(period) {
+				return _.chain(data)
+					.filter(function(entry) {
+						return entry.periodKey === period.value;
+					})
+					.reduce(function(memo, entry) {
+						memo += entry.count;
+						return memo;
+					}, 0)
+					.value();
+			})
+			.value();
+	}
+	
+	function selectPeriod(period) {
+		vm.selectedPeriod = period;
+		applyLabels();
+		applyFilter();
+	}
+	
+	function applyLabels() {
+		vm.labels = _.chain(vm.periods)
+			.filter(function(period) {
+				return period.value <= vm.selectedPeriod.value;
+			})
+			.map(function(period) {
+				return period.title;
+			})
+			.value();
+	}
+	
+	function selectGroup(group) {
+		vm.selectedGroup = group;
+		applyFilter();
+	}
+	
+	function selectType(type) {
+		vm.selectedType = type;
+		applyFilter();
+	}
+	
+	function applyFilter() {
+		var result = _.chain(vm.rawData)
+			.filter(function(entry) {
+				if (entry.periodKey > vm.selectedPeriod.value) {
+					return false;
+				}
+				
+				if (vm.selectedGroup && entry.group != vm.selectedGroup.value) {
+					return false;
+				}
+				
+				if (vm.selectedType && entry.type != vm.selectedType.value) {
+					return false;
+				}
+				
+				return true;
+			})
+			.value();
+		
+		applyData(result);
+	}
+	
+	function applyData(data) {
+		vm.data = [transformData(data)];
+	}
+	
+	function extractFilters(data) {
+		vm.periods = extractPeriods(data);
+		vm.selectedPeriod = _.last(vm.periods);
+		applyLabels();
+		vm.groups = extractGroups(data);
+		vm.types = extractTypes(data);
+		return data;
+		
+		function extractPeriods(data) {
+			return _.chain(data)
+				.uniqBy('periodKey')
+				.filter(function(entry) {
+					return !!entry.periodKey;
+				})
+				.map(function(value) {
+					return {value: value.periodKey, title: value.date};
+				})
+				.sortBy('value')
+				.value();
+		}
+
+		function extractGroups(data) {
+			return _.chain(data)
+				.uniqBy('group')
+				.filter(function(entry) {
+					return !!entry.group;
+				})
+				.map(function(value) {
+					return {value: value.group, title: value.group};
+				})
+				.sortBy('title')
+				.value();
+		}
+
+		function extractTypes(data) {
+			return _.chain(data)
+				.uniqBy('type')
+				.filter(function(entry) {
+					return !!entry.type;
+				})
+				.map(function(value) {
+					return {value: value.type, title: value.type};
+				})
+				.sortBy('title')
+				.value();
+		}
+		
+	}
+	
+	function getRecords(table, query, limit, offset, fields) {
+		// jscs:disable requireCamelCaseOrUpperCaseIdentifiers
+		var params = {};
+		params.sysparm_display_value = 'false';
+		if (query) {
+			params.sysparm_query = query;
+		}
+		if (limit && limit !== -1) {
+			params.sysparm_limit = limit;
+		}
+		if (offset && offset !== 0) {
+			params.sysparm_offset = offset;
+		}
+		if (fields) {
+			params.sysparm_fields = fields.join(',');
+		}
+		// jscs:enable requireCamelCaseOrUpperCaseIdentifiers
+		
+		var url = '/api/now/table/' + table + '?' + encodeQuerystring(params);
+		
+		return $http.get(url)
+			.then(processData)['catch'](function(res) {
+				if (res.status === 404) {
+					//no records found
+					return processData({});
+				}
+				else {
+					console.error(url, res, 'Unable to get data.');
+				}
+			});
+		
+		function processData(res) {
+			var data;
+			if (res.data) {
+				data = res.data.result;
+			}
+			else {
+				data = [];
+			}
+			
+			var total = res.headers ? res.headers('X-Total-Count') : 0;
+			if (total) {
+				data.totalCount = Number(total);
+			}
+			else {
+				data.totalCount = data.length;
+			}
+			
+			return data;
+		}
+		
+		function encodeQuerystring(data) {
+			var ret = [];
+			for (var d in data) {
+				var value = data[d];
+				if (Array.isArray(value)) {
+					for (var i in value){
+						ret.push(encodeURIComponent(d) + '=' + encodeURIComponent(value[i]));
+					}
+				}
+				else {
+					ret.push(encodeURIComponent(d) + '=' + encodeURIComponent(value));
+				}
+			}
+			return ret.join('&');
+		}
+	}
+}]]></client_script>
+        <controller_as>vm</controller_as>
+        <css/>
+        <data_table>sp_instance</data_table>
+        <demo_data/>
+        <description/>
+        <docs/>
+        <field_list/>
+        <has_preview>false</has_preview>
+        <id>k17-task-analysis</id>
+        <internal>false</internal>
+        <link/>
+        <name>Task Analysis</name>
+        <option_schema/>
+        <public>false</public>
+        <roles/>
+        <script/>
+        <servicenow>false</servicenow>
+        <sys_class_name>sp_widget</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2017-05-08 12:32:52</sys_created_on>
+        <sys_customer_update>true</sys_customer_update>
+        <sys_id>c5fac12edba63200b195773ebf9619d9</sys_id>
+        <sys_mod_count>155</sys_mod_count>
+        <sys_name>Task Analysis</sys_name>
+        <sys_package display_value="k17_analytics" source="x_86566_k17">15c31e56db223200b195773ebf96198c</sys_package>
+        <sys_policy/>
+        <sys_replace_on_upgrade>false</sys_replace_on_upgrade>
+        <sys_scope display_value="k17_analytics">15c31e56db223200b195773ebf96198c</sys_scope>
+        <sys_update_name>sp_widget_c5fac12edba63200b195773ebf9619d9</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2017-05-11 10:30:36</sys_updated_on>
+        <template><![CDATA[<h2>Task History</h2>
+{{vm.data}}
+<div style="background-color: #FFF; padding: 20px; border-radius: 3px">
+<div class="row">
+	<div class="col-md-12 text-right">
+  		
+     <span class="dropdown" uib-dropdown>
+       <i class="fa fa-calendar"></i>
+       <button id="single-button" type="button" class="btn btn-link text-uppercase" uib-dropdown-toggle>
+          {{vm.selectedPeriod.title}} <span class="caret"></span>
+        </button>
+       <ul class="dropdown-menu">
+         <li ng-repeat="period in vm.periods">
+           <a href ng-click="vm.selectPeriod(period)">{{::period.title}}</a>
+         </li>
+       </ul>
+     </span>
+     <span class="dropdown" uib-dropdown>
+        <i class="fa fa-filter"></i>
+        <button id="single-button" type="button" class="btn btn-link text-uppercase" uib-dropdown-toggle>
+          {{vm.selectedGroup.title || 'Assignment Group'}} <i class="fa fa-caret-down ml-xs"></i>
+        </button>
+       <ul class="dropdown-menu">
+         <li ng-show="vm.selectedGroup">
+           <a href ng-click="vm.selectGroup(null)">ALL</a>
+         </li>
+         <li ng-repeat="group in vm.groups">
+           <a href ng-click="vm.selectGroup(group)">{{::group.title}}</a>
+         </li>
+       </ul>
+     </span>
+     <span class="dropdown" uib-dropdown>
+        <button id="single-button" type="button" class="btn btn-link text-uppercase" uib-dropdown-toggle>
+          {{vm.selectedType.title || 'Service Type'}} <i class="fa fa-caret-down ml-xs"></i>
+        </button>
+       <ul class="dropdown-menu">
+         <li ng-show="vm.selectedType">
+           <a href ng-click="vm.selectType(null)">ALL</a>
+         </li>
+         <li ng-repeat="type in vm.types">
+           <a href ng-click="vm.selectType(type)">{{::type.title}}</a>
+         </li>
+       </ul>
+     </span> 
+  </div>      
+</div>
+<div class="row">
+	<div class="col-ms-12">&nbsp;</div>
+</div>
+ <div class="row">
+	<div class="col-ms-12">
+      	<canvas id="line" class="chart chart-line" chart-data="vm.data" chart-labels="vm.labels" height="100">
+		</canvas>
+      </div>
+  	</div>
+</div>]]></template>
+    </sp_widget>
+</record_update>

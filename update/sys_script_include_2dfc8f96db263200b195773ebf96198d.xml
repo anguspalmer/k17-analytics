@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_script_include">
+    <sys_script_include action="INSERT_OR_UPDATE">
+        <access>public</access>
+        <active>true</active>
+        <api_name>x_86566_k17.DWTaskProvider</api_name>
+        <client_callable>false</client_callable>
+        <description/>
+        <name>DWTaskProvider</name>
+        <script><![CDATA['use strict';
+
+gs.include('lodash');
+
+var DWTaskProvider = Class.create();
+DWTaskProvider.prototype = {
+    initialize: function() {
+    },
+	
+	aggregateData: function(year, month) {
+		var that = this;
+		
+		var data = this._getData(year, month);
+		
+		var result = _.chain(data)
+			.groupBy(function(entry) {
+				var priority = entry.priority || 'NA';
+				var group = entry.groupId || 'NA';
+				var type = entry.type || 'NA';
+				return group + '||' + priority + '||' + type;
+			})
+			.map(function(group) {
+				var template = group[0];
+				var entry = {
+					group_id: template.group_id,
+					group: template.group,
+					type: template.type,
+					priority: template.priority,
+					data: that._calculateEntry(group)
+				};
+				return entry;
+			})
+			.value();
+		
+		this._saveDW('tasksByPeriod', year, month, result);
+		
+		return result;
+	},
+	
+	_calculateEntry: function(data) {
+		var that = this;
+		
+		var defaultEntry = {
+			count: 0
+		};
+
+		var result = _.reduce(data, function(memo, item) {
+			defaultEntry.count++;
+			return memo;
+		}, defaultEntry);
+
+		return result;
+	},
+	
+	_getData: function(year, month) {
+		var startDate = new Date(year, month - 1, 1); //first day of the month
+        var endDate = new Date(year, month, 0); //last day of the month
+		
+		var rec = new GlideRecord('task');
+		rec.addEncodedQuery('^opened_atBETWEEN' + this._formatDate(startDate) + '@' + this._formatDate(endDate));
+		rec.query();
+		
+		var result = [];
+		while (rec.next()) {
+			var entry = {
+				group: rec.assignment_group.getDisplayValue(),
+				groupId : rec.assignment_group.toString(),
+				priority: rec.priority.toString(),
+				type: rec.getClassDisplayValue()
+			};
+			
+			result.push(entry);
+		}
+		
+		return result;
+	},
+	
+	_saveDW: function(name, year, month, data) {
+		this._removeDW(name, year, month);
+		
+		var rec = new GlideRecord('x_86566_k17_dw_data');
+		rec.initialize();
+		
+		rec.name = name;
+		rec.year = year;
+		rec.month = month;
+		rec.data = JSON.stringify(data);
+		
+		rec.update();
+	},
+	
+	_removeDW: function(name, year, month, data) {
+		var rec = new GlideRecord('x_86566_k17_dw_data');
+		rec.addQuery('year', year);
+		rec.addQuery('month', month);
+		rec.addQuery('name', name);
+		rec.query();
+		
+		rec.deleteMultiple();
+	},
+	
+	_formatDate: function(date) {
+		return date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate());
+
+		function pad(number) {
+			if (number < 10) {
+				return '0' + number;
+			}
+			return number;
+		}
+	},
+
+    type: 'DWTaskProvider'
+};]]></script>
+        <sys_class_name>sys_script_include</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2017-05-08 03:21:48</sys_created_on>
+        <sys_customer_update>true</sys_customer_update>
+        <sys_id>2dfc8f96db263200b195773ebf96198d</sys_id>
+        <sys_mod_count>62</sys_mod_count>
+        <sys_name>DWTaskProvider</sys_name>
+        <sys_package display_value="k17_analytics" source="x_86566_k17">15c31e56db223200b195773ebf96198c</sys_package>
+        <sys_policy>read</sys_policy>
+        <sys_replace_on_upgrade>false</sys_replace_on_upgrade>
+        <sys_scope display_value="k17_analytics">15c31e56db223200b195773ebf96198c</sys_scope>
+        <sys_update_name>sys_script_include_2dfc8f96db263200b195773ebf96198d</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2017-05-10 12:32:29</sys_updated_on>
+    </sys_script_include>
+</record_update>

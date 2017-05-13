@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<database>
+    <element label="DW Data" max_length="40" name="x_86566_k17_dw_data" type="collection">
+        <element label="Data" max_length="8000" name="data" type="script_plain"/>
+        <element label="Month" max_length="40" name="month" type="integer"/>
+        <element label="Name" max_length="100" name="name" type="string"/>
+        <element label="Year" max_length="40" name="year" type="integer"/>
+    </element>
+</database>
